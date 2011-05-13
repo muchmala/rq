@@ -1,0 +1,19 @@
+{ "name" : "rq"
+, "description" : "Queue implementation on Redis PUB/SUB"
+, "author" : "Taras Kunch <taras.kunch@gmail.com>"
+, "version" : "0.0.1"
+, "main" : "index.js"
+, "engines" :
+  { "node" : "~0.4"
+  , "npm" : "~1"
+  }
+, "repositories":
+  { "type" : "git"
+  , "url" : "https://github.com/muchmala/rq.git"
+  }
+, "dependencies" :
+  { "hiredis": "~0"
+  , "redis": "~0"
+  }
+}
+

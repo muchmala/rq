@@ -15,5 +15,8 @@
   { "hiredis": "~0"
   , "redis": "~0"
   }
+, "devDependencies":
+  { "vows" : "~0"
+  }
 }
 

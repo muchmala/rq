@@ -5,7 +5,6 @@ var rq = require('../');
 var redis = require('redis');
 
 var TIMEOUT = 10;
-var CHANNEL = 'someChannel';
 
 vows.describe('RQ listener').addBatch({
     'when creating new listener': {

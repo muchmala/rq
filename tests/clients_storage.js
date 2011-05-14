@@ -4,8 +4,6 @@ var vows = require('vows'),
 var rq = require('../');
 var redis = require('redis');
 
-var config = require('./config');
-
 var TIMEOUT = 10;
 
 vows.describe('RQ storage client').addBatch({

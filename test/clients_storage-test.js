@@ -2,15 +2,19 @@ var vows = require('vows'),
     assert = require('assert');
 
 var rq = require('../');
-var redis = require('redis');
+var config = require('./config');
 
-var TIMEOUT = 10;
+var helpers = require('./helpers');
+var withClient = helpers.withClient;
+var makeTimeout = helpers.makeTimeout;
 
 vows.describe('RQ storage client').addBatch({
     'when creating new storage client': {
-        topic: function () { return rq.getStorageClient({}) },
+        topic: function () {
+            rq.getStorageClient(config, this.callback)
+        },
 
-        'it should have method getList': function (storage) {
+        'it should have method getList': function (err, storage) {
             assert.isFunction(storage.getList, "storageClient does not have method list");
         },
 
@@ -41,11 +45,13 @@ vows.describe('RQ storage client').addBatch({
 
                         emptyList.append('someValue');
 
-                        setTimeout(function() {
-                            getClient().rpop(emptyList.listName, function(err, result) {
-                                self.callback(null, 'someValue' == result);
-                            });
-                        }, TIMEOUT);
+                        makeTimeout(function() {
+                            withClient(function(client) {
+                                client.rpop(emptyList.listName, function(err, result) {
+                                    self.callback(null, 'someValue' == result);
+                                });
+                            })
+                        });
                     },
                     'should add first element to the list' : function(err, result) {
                         assert.ok(result);
@@ -61,11 +67,13 @@ vows.describe('RQ storage client').addBatch({
 
                         someList.append('someValue');
 
-                        setTimeout(function() {
-                            getClient().rpop(someList.listName, function(err, result) {
-                                self.callback(null, 'someValue' == result);
+                        makeTimeout(function() {
+                            withClient(function(client) {
+                                client.rpop(someList.listName, function(err, result) {
+                                    self.callback(null, 'someValue' == result);
+                                });
                             });
-                        }, TIMEOUT);
+                        });
                     },
                     'should add element to the end of the list' : function(err, result) {
                         assert.ok(result);
@@ -81,11 +89,13 @@ vows.describe('RQ storage client').addBatch({
 
                         emptyList.prepend('someValue');
 
-                        setTimeout(function() {
-                            getClient().lpop(emptyList.listName, function(err, result) {
-                                self.callback(null, 'someValue' == result);
+                        makeTimeout(function() {
+                            withClient(function(client) {
+                                client.lpop(emptyList.listName, function(err, result) {
+                                    self.callback(null, 'someValue' == result);
+                                });
                             });
-                        }, TIMEOUT);
+                        });
                     },
                     'should add first element to the list' : function(err, result) {
                         assert.ok(result);
@@ -101,11 +111,13 @@ vows.describe('RQ storage client').addBatch({
 
                         someList.prepend('someValue');
 
-                        setTimeout(function() {
-                            getClient().lpop(someList.listName, function(err, result) {
-                                self.callback(null, 'someValue' == result);
+                        makeTimeout(function() {
+                            withClient(function(client) {
+                                client.lpop(someList.listName, function(err, result) {
+                                    self.callback(null, 'someValue' == result);
+                                });
                             });
-                        }, TIMEOUT);
+                        });
                     },
                     'should add element to the beginning of the list' : function(err, result) {
                         assert.ok(result);
@@ -119,9 +131,11 @@ vows.describe('RQ storage client').addBatch({
                     topic: function(someList) {
                         var self = this;
 
-                        getClient().lindex(someList.listName, 0, function(err, firstElement) {
-                            someList.popFirst(function(err, result) {
-                                self.callback(null, firstElement == result);
+                        withClient(function(client) {
+                            client.lindex(someList.listName, 0, function(err, firstElement) {
+                                someList.popFirst(function(err, result) {
+                                    self.callback(null, firstElement == result);
+                                });
                             });
                         });
                     },
@@ -137,9 +151,11 @@ vows.describe('RQ storage client').addBatch({
                     topic: function(someList) {
                         var self = this;
 
-                        getClient().lindex(someList.listName, -1, function(err, lastElement) {
-                            someList.popLast(function(err, result) {
-                                self.callback(null, lastElement == result);
+                        withClient(function(client) {
+                            client.lindex(someList.listName, -1, function(err, lastElement) {
+                                someList.popLast(function(err, result) {
+                                    self.callback(null, lastElement == result);
+                                });
                             });
                         });
                     },
@@ -156,8 +172,10 @@ vows.describe('RQ storage client').addBatch({
                         var self = this;
 
                         someList.popAndPrepend(function(err, poppedValue) {
-                            getClient().lindex(someList.listName, 0, function(err, result) {
-                                self.callback(null, poppedValue == result);
+                            withClient(function(client) {
+                                client.lindex(someList.listName, 0, function(err, result) {
+                                    self.callback(null, poppedValue == result);
+                                });
                             });
                         });
                     },
@@ -173,13 +191,13 @@ vows.describe('RQ storage client').addBatch({
                     topic: function(someList) {
                         var self = this;
 
-                        getClient().lindex(someList.listName, 0, function(err, element) {
-                            someList.removeValue(element, function() {
-                                getClient().lrange(someList.listName, 0, -1, function(err, list) {
-                                    self.callback(null, -1 == list.indexOf(element));
+                        withClient(function(client) {
+                            client.lindex(someList.listName, 0, function(err, element) {
+                                someList.removeValue(element, function() {
+                                    client.lrange(someList.listName, 0, -1, function(err, list) {
+                                        self.callback(null, -1 == list.indexOf(element));
+                                    });
                                 });
-
-
                             });
                         });
                     },
@@ -210,17 +228,15 @@ function shouldBeAFunction(functionName) {
     };
 }
 
-function getClient() {
-    return redis.createClient();
-}
-
 function emptyList(list, storage) {
     var self = this;
     var listName = 'list' + Math.random().toString().substr(2);
     var newList = storage.getList(listName);
 
-    getClient().del(listName, function() {
-        self.callback(null, newList);
+    withClient(function(client) {
+        client.del(listName, function() {
+            self.callback(null, newList);
+        });
     });
 }
 
@@ -229,11 +245,13 @@ function listWithData(list, storage) {
     var listName = 'list' + Math.random().toString().substr(2);
     var newList = storage.getList(listName);
 
-    getClient().multi()
-        .rpush(listName, 'value1')
-        .rpush(listName, 'value2').
-        exec(function() {
-            self.callback(null, newList);
-        });
+    withClient(function(client) {
+        client.multi()
+            .rpush(listName, 'value1')
+            .rpush(listName, 'value2').
+            exec(function() {
+                self.callback(null, newList);
+            });
+    });
 }
 

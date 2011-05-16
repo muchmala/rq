@@ -2,13 +2,17 @@ var vows = require('vows'),
     assert = require('assert');
 
 var rq = require('../');
-var redis = require('redis');
+var config = require('./config');
 
-var TIMEOUT = 10;
+var helpers = require('./helpers');
+var withClient = helpers.withClient;
+var makeTimeout = helpers.makeTimeout;
+
+var redis = require("redis");
 
 vows.describe('RQ publisher').addBatch({
     'when creating new publisher': {
-        topic: function () { return rq.getPublisher({}) },
+        topic: function () { return rq.getPublisher(config) },
 
         'it should have method publish': function (publisher) {
             assert.isFunction(publisher.publish);
@@ -22,17 +26,18 @@ vows.describe('RQ publisher').addBatch({
             topic: function(publisher) {
                 var self = this;
                 var channelName = 'someChannel';
-                var client = getClient();
 
-                client.on('message', function(channel, data) {
-                    self.callback(null, (channel == channelName && data == '{"some":"data"}'));
+                withClient(function(client) {
+                    client.on('message', function(channel, data) {
+                        self.callback(null, (channel == channelName && data == '{"some":"data"}'));
+                    });
+
+                    client.subscribe(channelName);
                 });
 
-                client.subscribe(channelName);
-
-                setTimeout(function() {
+                makeTimeout(function() {
                     publisher.broadcast(channelName, {some: 'data'});
-                }, TIMEOUT);
+                });
             },
 
             'message should be sent directly to <channelName> and delivered to all subscribers': function(err, result) {
@@ -47,18 +52,21 @@ vows.describe('RQ publisher').addBatch({
                 var channelName = 'someChannel';
                 var generatedChannelName = channelName + '3234234234234';
 
-                var client = getClient();
+                withClient(function(client) {
+                    client.on('message', function(channel, data) {
+                        self.callback(null, (channel == generatedChannelName && data == '{"some":"data"}'));
+                    });
 
-                client.on('message', function(channel, data) {
-                    self.callback(null, (channel == generatedChannelName && data == '{"some":"data"}'));
+                    client.subscribe(generatedChannelName);
                 });
 
-                client.subscribe(generatedChannelName);
-                getClient().lpush(channelName, generatedChannelName);
+                withClient(function(client) {
+                    client.lpush(channelName, generatedChannelName);
+                });
 
-                setTimeout(function() {
+                makeTimeout(function() {
                     publisher.publish(channelName, {some: 'data'});
-                }, TIMEOUT);
+                });
             },
 
             'message should be sent only to the first channel in <channelName> list': function(err, result) {
@@ -67,7 +75,3 @@ vows.describe('RQ publisher').addBatch({
         }
     }
 }).export(module);
-
-function getClient() {
-    return redis.createClient();
-}

@@ -2,15 +2,19 @@ var vows = require('vows'),
     assert = require('assert');
 
 var rq = require('../');
-var redis = require('redis');
+var config = require('./config');
 
-var TIMEOUT = 10;
+var helpers = require('./helpers');
+var withClient = helpers.withClient;
+var makeTimeout = helpers.makeTimeout;
 
 vows.describe('RQ listener').addBatch({
     'when creating new listener': {
-        topic: function () { return rq.getListener({}) },
+        topic: function () {
+            rq.getListener(config, this.callback)
+        },
 
-        'it should have method subscribe': function (listener) {
+        'it should have method subscribe': function (err, listener) {
             assert.isFunction(listener.subscribe);
         },
 
@@ -26,9 +30,11 @@ vows.describe('RQ listener').addBatch({
                         self.callback(null, ('someData' in data && data.someData == 'data'));
                     });
 
-                    setTimeout(function() {
-                        getClient().publish(channel, JSON.stringify({someData:'data'}));
-                    }, TIMEOUT);
+                    makeTimeout(function() {
+                        withClient(function(client) {
+                            client.publish(channel, JSON.stringify({someData:'data'}));
+                        });
+                    });
                 },
 
                 'should trigger the callback with passed data': function(err, result) {
@@ -45,11 +51,13 @@ vows.describe('RQ listener').addBatch({
                         self.callback(null, ('someData' in data && data.someData == 'data'));
                     });
 
-                    setTimeout(function() {
-                        getClient().lrange(channel, 0, -1, function(err, listOfChannels) {
-                            getClient().publish(listOfChannels[0], JSON.stringify({someData:'data'}));
+                    makeTimeout(function() {
+                        withClient(function(client) {
+                            client.lrange(channel, 0, -1, function(err, listOfChannels) {
+                                client.publish(listOfChannels[0], JSON.stringify({someData:'data'}));
+                            });
                         });
-                    }, TIMEOUT);
+                    });
                 },
 
                 'when publishing to that channel, callback should be also triggered': function(err, result) {
@@ -59,10 +67,6 @@ vows.describe('RQ listener').addBatch({
         }
     }
 }).export(module);
-
-function getClient() {
-    return redis.createClient();
-}
 
 function generateChannelName() {
     return 'cn' + Math.random().toString().substr(2);

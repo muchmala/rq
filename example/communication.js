@@ -1,6 +1,8 @@
 var rq = require('../');
 var sys = require('sys');
 
+var config = require('./config');
+
 /**
  * What this example shows:
  *
@@ -15,14 +17,14 @@ var worker = (function() {
     return function() {
         var id = ++index;
 
-        var listener = rq.getListener({});
-        var publisher = rq.getPublisher({});
-
-        listener.subscribe('commands', function(command) {
-            sys.puts("< Worker#" + id + " got command_" + command.id + " from Client#" + command.sender);
-            publisher.broadcast('responses', {
-                sender: id,
-                data: {}
+        var publisher = rq.getPublisher(config);
+        var listener = rq.getListener(config, function() {
+            listener.subscribe('commands', function(command) {
+                sys.puts("< Worker#" + id + " got command_" + command.id + " from Client#" + command.sender);
+                publisher.broadcast('responses', {
+                    sender: id,
+                    data: {}
+                });
             });
         });
     };
@@ -35,11 +37,11 @@ var client = (function() {
     return function() {
         var id = ++index;
 
-        var listener = rq.getListener({});
-        var publisher = rq.getPublisher({});
-
-        listener.subscribe('responses', function(response) {
-            sys.puts("> Client#" + id + " got response from Worker#" + response.sender);
+        var publisher = rq.getPublisher(config);
+        var listener = rq.getListener(config, function() {
+            listener.subscribe('responses', function(response) {
+                sys.puts("> Client#" + id + " got response from Worker#" + response.sender);
+            });
         });
 
         setInterval(function() {

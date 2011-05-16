@@ -19,4 +19,4 @@ and you'll have vows system-wide.
 
 Now you can run tests in your console:
 
-    vows tests/* --spec
+    vows --spec

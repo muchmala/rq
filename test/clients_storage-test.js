@@ -10,11 +10,9 @@ var makeTimeout = helpers.makeTimeout;
 
 vows.describe('RQ storage client').addBatch({
     'when creating new storage client': {
-        topic: function () {
-            rq.getStorageClient(config, this.callback)
-        },
+        topic: function () { return rq.getStorageClient(config) },
 
-        'it should have method getList': function (err, storage) {
+        'it should have method getList': function (storage) {
             assert.isFunction(storage.getList, "storageClient does not have method list");
         },
 

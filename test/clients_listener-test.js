@@ -10,9 +10,7 @@ var makeTimeout = helpers.makeTimeout;
 
 vows.describe('RQ listener').addBatch({
     'when creating new listener': {
-        topic: function () {
-            rq.getListener(config, this.callback)
-        },
+        topic: function () { return rq.getListener(config) },
 
         'it should have method subscribe': function (err, listener) {
             assert.isFunction(listener.subscribe);

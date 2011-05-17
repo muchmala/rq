@@ -5,16 +5,12 @@ exports.withClient = withClient;
 exports.makeTimeout = makeTimeout;
 
 function withClient(callback) {
-    new connection({
+    callback.call(this, (new connection({
         host: config.REDIS_HOST,
         port: config.REDIS_PORT,
         password: config.REDIS_PASSWORD,
         database: config.REDIS_DATABASE
-    }, function(err, connection) {
-        var client = connection.client;
-
-        callback.call(this, client);
-    });
+    })).client);
 }
 
 function makeTimeout(callback, delay) {

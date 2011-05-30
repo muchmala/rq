@@ -2,6 +2,8 @@ RQ - queue implementation on Redis PUB/SUB
 ==========================================
 
 Supports broadcasting to all clients that listen single channel and publishing to single listener using round robin scheme.
+## Requirements
+Redis 2.1.7+
 
 ## Installation
 1. Clone git repository
